@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quickreq"
+version = "0.1.0"
+description = "Lightweight HTTP client powered by curl"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+  { name = "AHMED ALHRRANI" }
+]
