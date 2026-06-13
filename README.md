@@ -1,461 +1,596 @@
 # quickreq
 
-`quickreq` مكتبة بسيطة جدًا لطلبات HTTP، لكنها لا تحاول أن تكون “ذكية أكثر من اللازم”.
-فكرتها واضحة: أنت تكتب طلبك من Python، والمكتبة تتولى تشغيل `curl` في الخلفية، ثم تعيد لك الاستجابة بشكل مرتب وسهل الاستخدام.
+`quickreq` مكتبة خفيفة وبسيطة للتعامل مع HTTP requests من بايثون، لكنها تعتمد على `curl` تحت الغطاء.  
+فكرتها واضحة: تعطيك واجهة نظيفة وسهلة مثل `get()` و `post()` و `Session()`، وفي نفس الوقت تستفيد من قوة `curl` في الشبكات، التحويلات، الكوكيز، ورفع الملفات.
 
-**المطور:** AHMED ALHRRANI  
-**T.me:** maho_s9  
-**GitHub:** Gisnsl
+المطور: **AHMED ALHRRANI**  
+Telegram: **@maho_s9**  
+GitHub: **Gisnsl**
 
-## لماذا هذه المكتبة موجودة؟
+---
 
-أحيانًا لا تريد إطارًا ضخمًا ولا طبقات كثيرة فوق بعض. تريد شيئًا مباشرًا:
+## لماذا quickreq؟
 
-- ترسل `GET` أو `POST`
-- تضيف headers
-- تحفظ cookies
-- ترسل JSON
-- ترفع ملفات
-- تتحكم في البروكسي و TLS
-- وتتعامل مع النتيجة بدون تعقيد
+أحيانًا تحتاج مكتبة:
 
-هذا بالضبط ما تحاول `quickreq` أن تقدمه.
+- سريعة في الاستخدام
+- خفيفة بدون تعقيد
+- تدعم JSON, form data, multipart files, cookies
+- فيها retry و timeout و TLS options
+- وتعطيك نفس شعور `requests` لكن بأسلوب أبسط ومباشر
 
-## الفكرة ببساطة
+هنا تأتي `quickreq`.
 
-المكتبة لا تعيد اختراع HTTP من الصفر. هي تبني أمر `curl` مناسبًا ثم تشغله، وبعدها تقرأ:
+---
 
-- status code
-- headers
-- body
-- cookies
-- معلومات التحويلات redirect
-- وأي خطأ حصل أثناء الاتصال
+## أهم الأشياء التي تعملها المكتبة
 
-يعني أنت تتعامل مع واجهة Python نظيفة، بينما القوة الفعلية تأتي من `curl` نفسه.
+`quickreq` تقدر:
+
+- ترسل طلبات HTTP مثل:
+  - `GET`
+  - `POST`
+  - `PUT`
+  - `DELETE`
+  - `PATCH`
+  - `HEAD`
+  - `OPTIONS`
+- ترسل `params` في الرابط
+- ترسل `headers`
+- ترسل `cookies`
+- ترسل `data` بصيغة:
+  - form-urlencoded
+  - raw bytes
+  - text
+  - stream / file-like object
+- ترسل `json`
+- ترفع ملفات `files`
+- تتعامل مع redirects
+- تتحكم في `timeout`
+- تختار `http1` أو `http2` أو `http3`
+- تدعم `verify` و `tls_version` و `tls_insecure`
+- تدعم `proxies`
+- تدعم `auth`
+- تدعم `retry`
+- تعطيك كائن `Response` مرتب فيه:
+  - `status_code`
+  - `headers`
+  - `cookies`
+  - `text`
+  - `content`
+  - `json()`
+  - `elapsed`
+  - `history`
+  - `ok`
+
+---
 
 ## المتطلبات
 
-- Python 3.8 أو أحدث
-- وجود `curl` مثبتًا على النظام
+- Python 3.8+
+- وجود `curl` في النظام
 
-إذا لم يكن `curl` موجودًا، فلن تعمل الطلبات.
+> مهم: هذه المكتبة لا تعمل بدون `curl` لأنه هو المحرك الأساسي خلفها.
+
+---
 
 ## التثبيت
 
-إذا كانت الحزمة داخل مجلد `quickreq/`:
+إذا كانت الحزمة منشورة عندك كـ package:
 
 ```bash
+pip install quickreq
+
+أو من المشروع مباشرة:
+
 pip install .
-```
 
-أو لو تريدها بوضع التطوير:
 
-```bash
-pip install -e .
-```
+---
 
-## شكل الحزمة
+استخدام سريع
 
-```text
-quickreq/
-└── __init__.py
-README.md
-pyproject.toml
-```
+GET
 
-## ما الذي توفره `quickreq`؟
+import quickreq
 
-### 1) `Client`
-هذا هو قلب المكتبة.
-
-من خلاله تستطيع ضبط أغلب الأشياء المهمة قبل إرسال أي طلب:
-
-- `http1` / `http2` / `http3`
-- `timeout`
-- `connect_timeout`
-- `follow_redirects`
-- `verify`
-- `tls_version`
-- `tls_insecure`
-- `cookies`
-- `headers`
-- `user_agent`
-- `proxies`
-- `max_retries`
-- `retry_statuses`
-- `retry_backoff_factor`
-- `retry_max_delay`
-- `debug`
-
-فكرة `Client` أنه يحفظ لك الإعدادات التي تريد استخدامها مرارًا، بدل أن تكتبها كل مرة من جديد.
-
-### 2) `Session`
-هي ليست كائنًا مختلفًا فعليًا، بل اسم مألوف لمن يفضل أسلوبًا قريبًا من مكتبات HTTP المعروفة.
-
-### 3) `Response`
-هذا هو كائن النتيجة الذي تستلمه بعد الطلب.
-
-يحمل معه أشياء مفيدة مثل:
-
-- `status_code`: كود الرد مثل 200 أو 404
-- `url`: الرابط النهائي الذي انتهى إليه الطلب
-- `headers`: الهيدرز بشكل منظم
-- `raw_headers`: الهيدرز كما وردت تقريبًا
-- `content`: المحتوى الخام بالبايت
-- `text`: المحتوى كنص
-- `cookies`: الكوكيز المستلمة
-- `elapsed`: الزمن الذي استغرقه الطلب
-- `reason`: السبب النصي للحالة إن وجد
-- `history`: سجل التحويلات عند وجود Redirects
-- `stderr`: رسالة `curl` في حال ظهرت
-- `effective_url`: الرابط النهائي الفعلي
-- `http_version`: إصدار HTTP المستخدم
-- `redirect_count`: عدد التحويلات
-- `request_cmd`: أمر `curl` الذي تم تنفيذه
-
-### 4) الاستثناءات
-المكتبة لا ترجع لك الفشل على شكل رسالة عامة فقط، بل تحاول تصنيفه:
-
-- `RequestError`
-- `CurlError`
-- `NetworkError`
-- `DNSResolutionError`
-- `DNSDropError`
-- `RequestTimeoutError`
-- `TLSError`
-- `HTTPStatusError`
-- `JSONDecodeError`
-
-هذا يساعدك على معرفة أين المشكلة بالضبط: DNS، شبكة، TLS، timeout، أو كود HTTP نفسه.
-
-## الاستخدام السريع
-
-```python
-from quickreq import get
-
-resp = get('https://example.com')
+resp = quickreq.get("https://httpbin.org/get")
 print(resp.status_code)
 print(resp.text)
-```
 
-## إرسال طلب GET
+POST باستخدام JSON
 
-```python
-from quickreq import get
+import quickreq
 
-resp = get('https://httpbin.org/get')
-print(resp.status_code)
-print(resp.headers)
-```
-
-## إرسال طلب POST مع JSON
-
-هذه من أكثر الحالات استخدامًا.
-
-```python
-from quickreq import post
-
-resp = post(
-    'https://httpbin.org/post',
-    json={'name': 'Ahmed', 'tool': 'quickreq'}
+resp = quickreq.post(
+    "https://httpbin.org/post",
+    json={"name": "Ahmed", "role": "developer"}
 )
 
 print(resp.status_code)
 print(resp.json())
-```
 
-عند استخدام `json=...` تقوم المكتبة تلقائيًا بتهيئة المحتوى كـ JSON وتضيف `Content-Type: application/json; charset=utf-8`.
+POST باستخدام form data
 
-## إرسال form data
+import quickreq
 
-```python
-from quickreq import post
+resp = quickreq.post(
+    "https://httpbin.org/post",
+    data={"username": "maho", "password": "1234"}
+)
 
-resp = post(
-    'https://httpbin.org/post',
-    data={'a': 1, 'b': 'hello'}
+print(resp.status_code)
+print(resp.text)
+
+إرسال headers
+
+import quickreq
+
+resp = quickreq.get(
+    "https://httpbin.org/headers",
+    headers={
+        "User-Agent": "quickreq/1.0",
+        "Accept": "application/json"
+    }
+)
+
+print(resp.json())
+
+إرسال cookies
+
+import quickreq
+
+resp = quickreq.get(
+    "https://httpbin.org/cookies",
+    cookies={"session": "abc123"}
 )
 
 print(resp.text)
-```
 
-هنا يتم تحويل البيانات إلى `application/x-www-form-urlencoded`.
+رفع ملف
 
-## رفع ملفات
+import quickreq
 
-المكتبة تدعم رفع الملفات عبر `multipart/form-data`.
-
-```python
-from quickreq import post
-
-resp = post(
-    'https://httpbin.org/post',
+resp = quickreq.post(
+    "https://httpbin.org/post",
     files={
-        'file': ('sample.txt', b'hello world', 'text/plain')
+        "file": ("example.txt", b"Hello from quickreq", "text/plain")
     }
 )
 
 print(resp.status_code)
-```
+print(resp.text)
 
-يمكنك أيضًا تمرير ملف من المسار مباشرة، أو تمرير محتوى خام، والمكتبة ستتعامل معه.
 
-## استخدام الكوكيز
+---
 
-`quickreq` تحفظ الكوكيز وتدمجها مع الطلبات التالية داخل نفس `Client`.
+Client و Session
 
-```python
-from quickreq import Client
+إذا كنت تريد تبني إعداداتك مرة واحدة واستخدامها في عدة requests، استخدم Client أو Session.
 
-client = Client(cookies={'session': '12345'})
-resp = client.get('https://example.com')
+Client
 
-print(resp.cookies.get_dict())
-```
-
-هذا مفيد جدًا لو كنت تتعامل مع جلسة تسجيل دخول أو API يعتمد على cookies.
-
-## التعامل مع الاستجابة
-
-### `resp.text`
-يعطيك الجسم كنص بعد محاولة استخدام الترميز المناسب.
-
-### `resp.content`
-يعطيك الجسم الخام بالبايت.
-
-### `resp.json()`
-يفك JSON إذا كان نوع المحتوى مناسبًا.
-
-### `resp.lines`
-يرجع النص مقسومًا إلى أسطر.
-
-### `resp.iter_content(chunk_size=8192)`
-مفيد عندما تريد قراءة المحتوى على دفعات بدل تحميله دفعة واحدة.
-
-### `resp.iter_lines()`
-يمر على الأسطر واحدًا واحدًا.
-
-### `resp.save(path)`
-يحفظ الرد في ملف.
-
-### `resp.raise_for_status()`
-يرفع `HTTPStatusError` إذا كانت الحالة ليست ضمن نطاق النجاح.
-
-## خصائص مفيدة داخل `Response`
-
-### `resp.ok`
-ترجع `True` إذا كانت الحالة بين 200 و 399.
-
-### `resp.is_json`
-تتحقق من أن المحتوى JSON فعليًا عبر `Content-Type`.
-
-### `resp.encoding`
-تحاول قراءة `charset` من الهيدر، وإن لم تجده فتعتمد `utf-8`.
-
-### `resp.content_type`
-تعطيك قيمة `Content-Type` كما وصلت.
-
-## إعداد عميل مخصص
-
-```python
 from quickreq import Client
 
 client = Client(
-    timeout=20,
+    timeout=30,
     follow_redirects=True,
-    user_agent='quickreq/1.0',
-    headers={'Accept': 'application/json'},
+    user_agent="quickreq/1.0",
+    max_retries=2
 )
 
-resp = client.get('https://httpbin.org/json')
+resp = client.get("https://httpbin.org/get")
+print(resp.status_code)
+
+Session
+
+Session موجودة كاسم بديل لـ Client.
+
+from quickreq import Session
+
+s = Session()
+resp = s.get("https://httpbin.org/get")
+print(resp.status_code)
+
+
+---
+
+إعدادات مهمة
+
+timeout
+
+يمكنك تمرير قيمة واحدة أو قيمتين:
+
+quickreq.get("https://example.com", timeout=10)
+quickreq.get("https://example.com", timeout=(5, 15))
+
+timeout=10 يعني total timeout
+
+(connect_timeout, total_timeout)
+
+
+
+---
+
+follow_redirects
+
+quickreq.get("https://example.com", follow_redirects=True)
+
+أو:
+
+client = quickreq.Client(follow_redirects=True)
+
+
+---
+
+verify و tls_insecure
+
+quickreq.get("https://example.com", verify=True)
+quickreq.get("https://example.com", verify=False)
+quickreq.get("https://example.com", tls_insecure=True)
+
+verify=True هو الوضع الافتراضي
+
+verify=False أو tls_insecure=True يعطّل التحقق من الشهادة
+
+
+
+---
+
+tls_version
+
+quickreq.get("https://example.com", tls_version="1.2")
+
+القيم المدعومة:
+
+"1.0"
+
+"1.1"
+
+"1.2"
+
+"1.3"
+
+
+
+---
+
+proxies
+
+quickreq.get(
+    "https://example.com",
+    proxies={
+        "http": "http://127.0.0.1:8080",
+        "https": "http://127.0.0.1:8080"
+    }
+)
+
+
+---
+
+auth
+
+quickreq.get(
+    "https://example.com",
+    auth=("username", "password")
+)
+
+أو:
+
+quickreq.get(
+    "https://example.com",
+    auth="Bearer mytoken"
+)
+
+أو:
+
+quickreq.get(
+    "https://example.com",
+    auth="token mytoken"
+)
+
+
+---
+
+retry
+
+client = quickreq.Client(
+    max_retries=3,
+    retry_statuses={429, 500, 502, 503, 504}
+)
+
+هذا مفيد عندما تكون الخدمة مؤقتًا مشغولة أو ترجع أخطاء قابلة لإعادة المحاولة.
+
+
+---
+
+Response
+
+كل request يرجع لك كائن Response.
+
+أهم الخصائص
+
+resp.status_code
+resp.url
+resp.headers
+resp.raw_headers
+resp.cookies
+resp.elapsed
+resp.reason
+resp.history
+resp.stderr
+resp.effective_url
+resp.http_version
+resp.redirect_count
+
+أهم الدوال والخصائص
+
+resp.ok
+resp.text
+resp.content
+resp.json()
+resp.iter_lines()
+resp.iter_content(chunk_size=8192)
+resp.get_header("Content-Type")
+resp.raise_for_status()
+resp.save("file.bin")
+
+مثال
+
+resp = quickreq.get("https://httpbin.org/json")
+
+if resp.ok:
+    data = resp.json()
+    print(data)
+else:
+    print("Request failed:", resp.status_code)
+
+
+---
+
+التعامل مع JSON
+
+resp = quickreq.get("https://httpbin.org/json")
+
+print(resp.is_json)
 print(resp.json())
-```
 
-هذا الأسلوب جيد عندما تريد نفس السلوك في أكثر من طلب.
+ولو رجع الرد ليس JSON، فالمكتبة سترفع خطأ مناسب.
+ويمكنك تمرير قيمة افتراضية:
 
-## البروتوكولات HTTP
+value = resp.json(default={})
 
-يمكنك اختيار بروتوكول واحد فقط:
 
-- `http1=True`
-- `http2=True`
-- `http3=True`
+---
 
-مثال:
+حفظ المحتوى في ملف
 
-```python
-client = Client(http2=True)
-```
+resp = quickreq.get("https://example.com/file.zip")
+resp.save("file.zip")
 
-إذا لم تحدد شيئًا، فالمكتبة تستخدم HTTP/1.1 بشكل افتراضي.
+أو يمكنك حفظ أي رد إلى ملف:
 
-## الوقت والمهلات
+with open("out.txt", "w", encoding="utf-8") as f:
+    f.write(resp.text)
 
-يمكنك ضبط:
 
-- `timeout` كقيمة واحدة
-- أو `timeout=(connect_timeout, total_timeout)`
-- أو `connect_timeout` بشكل مستقل
+---
 
-مثال:
+رفع الملفات والـ multipart
 
-```python
-client = Client(timeout=(5, 20))
-```
+quickreq تدعم رفع الملفات بطريقة عملية جدًا.
 
-المعنى هنا:
-- 5 ثوانٍ للاتصال
-- 20 ثانية كحد إجمالي
+ملف من bytes
 
-## إعادة المحاولة Retry
+quickreq.post(
+    "https://httpbin.org/post",
+    files={
+        "upload": ("hello.txt", b"hello world", "text/plain")
+    }
+)
 
-المكتبة لا تستسلم مباشرة لبعض الحالات المؤقتة.
+ملف من path
 
-عادةً تعيد المحاولة في حالات مثل:
+quickreq.post(
+    "https://httpbin.org/post",
+    files={
+        "upload": "myfile.txt"
+    }
+)
 
-- `429`
-- `500`
-- `502`
-- `503`
-- `504`
+بيانات + ملفات معًا
 
-مثال:
+quickreq.post(
+    "https://httpbin.org/post",
+    data={"title": "test"},
+    files={"upload": ("a.txt", b"content")}
+)
 
-```python
-client = Client(max_retries=3, retry_backoff_factor=0.5)
-resp = client.get('https://example.com')
-```
 
-كما أنها تتعامل مع `Retry-After` إذا كان موجودًا في الرد.
+---
 
-## TLS والبروكسي
+الأخطاء
 
-### TLS
-يمكنك اختيار نسخة TLS أو تخفيف التحقق عند الحاجة:
+المكتبة تستخدم أخطاء واضحة بدل الرسائل الغامضة.
 
-```python
-client = Client(tls_version='1.2')
-```
+الأنواع الأساسية
 
-أو:
+RequestError
 
-```python
-client = Client(verify=False)
-```
+CurlError
 
-أو:
+NetworkError
 
-```python
-client = Client(tls_insecure=True)
-```
+DNSResolutionError
 
-### Proxy
-يدعم:
+DNSDropError
 
-- `http`
-- `https`
-- `all`
-- `proxy`
+RequestTimeoutError
 
-مثال:
+TLSError
 
-```python
-client = Client(proxies={'https': 'http://127.0.0.1:8080'})
-```
+HTTPStatusError
 
-## التوثيق Authentication
+JSONDecodeError
 
-المكتبة تتعامل مع `auth` بعدة صيغ:
 
-- `(username, password)` → Basic Auth
-- `'Bearer ...'` → يبقى كما هو
-- `'Token ...'` → يتحول إلى Bearer
-- أي string عادي → Bearer token
+مثال
 
-مثال:
-
-```python
-from quickreq import get
-
-resp = get('https://api.example.com', auth=('user', 'pass'))
-```
-
-## الهيدرز Headers
-
-يمكنك تمرير الهيدرز التي تريدها، والمكتبة تدمجها مع الهيدرز الافتراضية.
-
-هي أيضًا تمنع القيم التي تحتوي على:
-
-- ` `
-- ``
-- `
-`
-
-وهذا مهم لأن وجود هذه الأحرف داخل headers قد يسبب مشاكل أو سلوكًا غير آمن.
-
-## البث Streaming
-
-إذا استخدمت:
-
-```python
-resp = client.get(url, stream=True)
-```
-
-فسيتم الاحتفاظ بالجسم في ملف مؤقت بدل نسخه كاملًا إلى الذاكرة فورًا.
-
-هذا مفيد عندما يكون الرد كبيرًا أو عندما تريد قراءته تدريجيًا.
-
-## الدوال الجاهزة على مستوى المكتبة
-
-بدل أن تنشئ `Client` في كل مرة، تستطيع استعمال الدوال المختصرة:
-
-- `request(method, url, ...)`
-- `get(url, ...)`
-- `post(url, ...)`
-- `put(url, ...)`
-- `delete(url, ...)`
-- `patch(url, ...)`
-- `head(url, ...)`
-- `options(url, ...)`
-
-وتوجد أيضًا دوال مساعدة لقراءة أجزاء من `Response`:
-
-- `is_json_response(resp)`
-- `text(resp)`
-- `json(resp, default=...)`
-- `cookies(resp)`
-- `status(resp)`
-- `headers(resp)`
-- `content(resp)`
-- `ok(resp)`
-
-## مثال على التعامل مع الأخطاء
-
-```python
-from quickreq import get, RequestError, HTTPStatusError
+import quickreq
 
 try:
-    resp = get('https://example.com', raise_for_status=True)
-except HTTPStatusError as e:
-    print('HTTP status:', e.response.status_code)
-except RequestError as e:
-    print('Request failed:', e)
-```
+    resp = quickreq.get("https://invalid.domain.example")
+    resp.raise_for_status()
+except quickreq.RequestError as e:
+    print("Request error:", e)
 
-## ملاحظات صريحة ومهمة
 
-- `quickreq` تعتمد على `curl` فعلًا، لذلك جودة التجربة مرتبطة ببيئة النظام.
-- دعم `http3` يعتمد على نسخة `curl` الموجودة عندك.
-- عند استخدام `stream=True` من الأفضل إنهاء التعامل مع الرد بشكل صحيح أو استدعاء `close()` إذا احتجت.
-- `Client` يحتفظ بالكوكيز ويحدّثها تلقائيًا بعد الطلبات.
+---
 
-## خلاصة سريعة
+الاختصارات الجاهزة
 
-`quickreq` مناسبة لك إذا كنت تريد مكتبة:
+المكتبة توفر دوال جاهزة مباشرة:
 
-- خفيفة
-- واضحة
-- فيها دعم JSON و form و files
-- تتعامل مع cookies و headers و redirects
-- وتستفيد من قوة `curl` بدون أن تكتب أوامره يدويًا كل مرة
+quickreq.get(...)
+quickreq.post(...)
+quickreq.put(...)
+quickreq.delete(...)
+quickreq.patch(...)
+quickreq.head(...)
+quickreq.options(...)
+quickreq.request(...)
+
+
+---
+
+build_client
+
+إذا كنت تريد إنشاء Client بطريقة واضحة:
+
+client = quickreq.build_client(
+    timeout=20,
+    follow_redirects=True,
+    headers={"X-App": "quickreq"}
+)
+
+
+---
+
+helper functions
+
+المكتبة فيها بعض الدوال الصغيرة المفيدة:
+
+quickreq.is_json_response(resp)
+quickreq.text(resp)
+quickreq.json(resp)
+quickreq.cookies(resp)
+quickreq.status(resp)
+quickreq.headers(resp)
+quickreq.content(resp)
+quickreq.ok(resp)
+
+
+---
+
+مثال عملي كامل
+
+import quickreq
+
+client = quickreq.Client(
+    follow_redirects=True,
+    timeout=15,
+    user_agent="quickreq/1.0",
+    max_retries=2
+)
+
+resp = client.post(
+    "https://httpbin.org/post",
+    json={
+        "name": "Ahmed",
+        "project": "quickreq"
+    },
+    headers={
+        "Accept": "application/json"
+    }
+)
+
+print("Status:", resp.status_code)
+print("URL:", resp.url)
+print("JSON:", resp.json())
+
+
+---
+
+ملاحظات مهمة
+
+هذه المكتبة تعتمد على curl، لذلك وجوده ضروري.
+
+إذا لم يكن curl موجودًا في النظام، ستفشل الطلبات.
+
+المكتبة تحاول أن تكون مرنة، لكنها أيضًا حذرة في التعامل مع المدخلات.
+
+الكوكيز يتم حفظها داخل Client تلقائيًا بعد الطلبات.
+
+stream=True يخزن الرد على ملف مؤقت بدل تحميله كاملًا في الذاكرة.
+
+
+
+---
+
+هيكل المكتبة
+
+عادة تكون بالشكل التالي:
+
+quickreq/
+└── __init__.py
+README.md
+pyproject.toml
+
+
+---
+
+الترخيص
+
+يُضاف هنا الترخيص الذي تريده للمشروع، مثل:
+
+MIT
+
+Apache-2.0
+
+BSD-3-Clause
+
+
+
+---
+
+للمساهمة
+
+إذا كنت تريد تطوير quickreq:
+
+1. افتح issue
+
+
+2. اقترح تحسين
+
+
+3. أرسل pull request
+
+
+
+
+---
+
+كلمة أخيرة
+
+quickreq مكتبة كتبت لتكون مباشرة، مفهومة، وسهلة الاستخدام.
+ما فيها تعقيد زائد، وما تحاول تتفلسف على المستخدم.
+فكرتها أنها تعطيك أدوات HTTP جاهزة بشكل نظيف، وتخليك تشتغل بسرعة.
+
+
+---
+
+روابط المطور
+
+Telegram: T.me/maho_s9
+
+GitHub: Gisnsl
